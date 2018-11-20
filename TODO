@@ -1,5 +1,7 @@
-20-Nov-18:
-	* Add pledge(2) and unveil(2) support for OpenBSD
+Possible future development:
+
+	* RPM package
+	* Add support for mmap() in addition to SHM (for Haiku/R1)
 
 Things I should work on:
 
