@@ -95,7 +95,6 @@ void userlist(state *st)
 	struct passwd *pwd;
 	struct stat dir;
 	char buf[BUFSIZE];
-	char wbuf[BUFSIZE];
 	struct tm *ltime;
 	char timestr[20];
 	int width;
@@ -123,28 +122,13 @@ void userlist(state *st)
 			ltime = localtime(&dir.st_mtime);
 			strftime(timestr, sizeof(timestr), DATE_FORMAT, ltime);
 
-			if (st->server_tls == 1){
-				snprintf(wbuf, BUFSIZE, 
-					"1%-*.*s   %s        -  \t/~%s/\t%s\t%i" CRLF,
-					width, width, buf, timestr, pwd->pw_name,
-					 st->server_host, st->server_port);
-				tlsprint(st, wbuf);
-			} else {
 			printf("1%-*.*s   %s        -  \t/~%s/\t%s\t%i" CRLF,
 				width, width, buf, timestr, pwd->pw_name,
 				st->server_host, st->server_port);
-			}
 		}
 		else {
-			if (st->server_tls == 1) {
-			snprintf(wbuf, BUFSIZE,
-				"1%.*s\t/~%s/\t%s\t%i" CRLF, st->out_width, buf,
-				pwd->pw_name, st->server_host_default, st->server_port);
-			tlsprint(st, wbuf);
-			} else {
 			printf("1%.*s\t/~%s/\t%s\t%i" CRLF, st->out_width, buf,
 				pwd->pw_name, st->server_host_default, st->server_port);
-			}
 		}
 	}
 
@@ -162,7 +146,6 @@ void vhostlist(state *st)
 	struct tm *ltime;
 	char timestr[20];
 	char buf[BUFSIZE];
-	char wbuf[BUFSIZE];
 	int width;
 	int num;
 	int i;
@@ -195,28 +178,15 @@ void vhostlist(state *st)
 			ltime = localtime(&dir[i].mtime);
 			strftime(timestr, sizeof(timestr), DATE_FORMAT, ltime);
 
-			if (st->server_tls == 1) {
-				snprintf(wbuf, BUFSIZE, "1%-*.*s   %s        -  \t/;%s\t%s\t%i" CRLF,
-							width, width, buf, timestr, dir[i].name,
-							dir[i].name, st->server_port);
-				tlsprint(st, wbuf);
-			} else {
 			printf("1%-*.*s   %s        -  \t/;%s\t%s\t%i" CRLF,
 				width, width, buf, timestr, dir[i].name, 
 				dir[i].name, st->server_port);
-			}
 		}
 
 		/* Teh boring version */
 		else {
-			if (st->server_tls == 1) {
-				snprintf(wbuf, BUFSIZE, "1%.*s\t/;%s\t%s\t%i" CRLF, st->out_width, buf,
-							dir[i].name, dir[i].name, st->server_port);
-				tlsprint(st, wbuf);
-			} else {
 			printf("1%.*s\t/;%s\t%s\t%i" CRLF, st->out_width, buf,
 				dir[i].name, dir[i].name, st->server_port);
-			}
 		}
 	}
 }
@@ -302,7 +272,6 @@ int gophermap(state *st, char *mapfile, int depth)
 #ifdef HAVE_POPEN
 	char command[BUFSIZE];
 #endif
-	char wbuf[BUFSIZE];
 	char *selector;
 	char *name;
 	char *host;
@@ -438,14 +407,8 @@ int gophermap(state *st, char *mapfile, int depth)
 		    selector[0] == '/' ||
 		    host != st->server_host) {
 
-			if (st->server_tls == 1) {
-				snprintf(wbuf, BUFSIZE, "%c%s\t%s\t%s\t%i" CRLF, type, name,
-							selector, host, port);
-				tlsprint(st, wbuf);
-			} else {
 			printf("%c%s\t%s\t%s\t%i" CRLF, type, name,
 				selector, host, port);
-			}
 		}
 
 		/* Handle relative resources */
@@ -482,7 +445,6 @@ void gopher_menu(state *st)
 	struct tm *ltime;
 	struct stat file;
 	char buf[BUFSIZE];
-	char wbuf[BUFSIZE];
 	char pathname[BUFSIZE];
 	char displayname[BUFSIZE];
 	char encodedname[BUFSIZE];
@@ -567,17 +529,9 @@ void gopher_menu(state *st)
 			if (strcmp(parent, ROOT) == MATCH) parent++;
 
 			/* Print link */
-			if (st->server_tls == 1) {
-				snprintf(wbuf, BUFSIZE, "1%-*s\t%s/\t%s\t%i" CRLF,
-							st->opt_date ? (st->out_width - 1) : (int) strlen(PARENT),
-							PARENT, parent, st->server_host, st->server_port);
-				tlsprint(st, wbuf);
-			} else {
-
 			printf("1%-*s\t%s/\t%s\t%i" CRLF,
 				st->opt_date ? (st->out_width - 1) : (int) strlen(PARENT),
 				PARENT, parent, st->server_host, st->server_port);
-			}
 		}
 	}
 
@@ -658,17 +612,6 @@ void gopher_menu(state *st)
 				n = width - strcut(displayname, width);
 				strrepeat(buf, ' ', n);
 
-				if (st->server_tls == 1) {
-					snprintf(wbuf, BUFSIZE, "1%s%s   %s        -  \t%s%s/\t%s\t%i" CRLF,
-						displayname,
-						buf,
-						timestr,
-						st->req_selector,
-						encodedname,
-						st->server_host,
-						st->server_port);
-					tlsprint(st, wbuf);
-				} else {
 				printf("1%s%s   %s        -  \t%s%s/\t%s\t%i" CRLF,
 					displayname,
 					buf,
@@ -677,28 +620,17 @@ void gopher_menu(state *st)
 					encodedname,
 					st->server_host,
 					st->server_port);
-				}
 			}
 
 			/* Regular dir listing */
 			else {
 				strcut(displayname, st->out_width);
-				if (st->server_tls == 1) {
-					snprintf(wbuf, BUFSIZE, "1%s\t%s%s/\t%s\t%i" CRLF,
-						displayname,
-						st->req_selector,
-						encodedname,
-						st->server_host,
-						st->server_port);
-					tlsprint(st, wbuf);
-				} else {
 				printf("1%s\t%s%s/\t%s\t%i" CRLF,
 					displayname,
 					st->req_selector,
 					encodedname,
 					st->server_host,
 					st->server_port);
-				}
 			}
 
 			continue;
@@ -720,18 +652,6 @@ void gopher_menu(state *st)
 			n = width - strcut(displayname, width);
 			strrepeat(buf, ' ', n);
 
-			if (st->server_tls) {
-				snprintf(wbuf, BUFSIZE, "%c%s%s   %s %s\t%s%s\t%s\t%i" CRLF, type,
-					displayname,
-					buf,
-					timestr,
-					sizestr,
-					st->req_selector,
-					encodedname,
-					st->server_host,
-					st->server_port);
-				tlsprint(st, wbuf);
-			} else {
 			printf("%c%s%s   %s %s\t%s%s\t%s\t%i" CRLF, type,
 				displayname,
 				buf,
@@ -741,28 +661,17 @@ void gopher_menu(state *st)
 				encodedname,
 				st->server_host,
 				st->server_port);
-			}
 		}
 
 		/* Regular file listing */
 		else {
 			strcut(displayname, st->out_width);
-			if (st->server_tls == 1) {
-				snprintf(wbuf, BUFSIZE, "%c%s\t%s%s\t%s\t%i" CRLF, type,
-						displayname,
-						st->req_selector,
-						encodedname,
-						st->server_host,
-						st->server_port);
-				tlsprint(st, wbuf);
-			} else {
 			printf("%c%s\t%s%s\t%s\t%i" CRLF, type,
 				displayname,
 				st->req_selector,
 				encodedname,
 				st->server_host,
 				st->server_port);
-			}
 		}
 	}
 

@@ -66,7 +66,6 @@ void send_text_file(state *st)
 	FILE *fp;
 	char in[BUFSIZE];
 	char out[BUFSIZE];
-	char wbuf[BUFSIZE];
 	int line;
 
 	if (st->debug) syslog(LOG_INFO, "outputting text file \"%s\"", st->req_realpath);
@@ -84,31 +83,15 @@ void send_text_file(state *st)
 		chomp(out);
 
 #ifdef ENABLE_STRICT_RFC1436
-		if (strcmp(out, ".") == MATCH) {
-			if (st->server_tls == 1) {
-				snprintf(wbuf, BUFSIZE, ".." CRLF);
-				tlsprint(st, wbuf);
-			} else {
-				printf(".." CRLF);
-			}
-		}
+		if (strcmp(out, ".") == MATCH) printf(".." CRLF);
+		else
 #endif
-		if (st->server_tls == 1) {
-			snprintf(wbuf, BUFSIZE, "%s" CRLF, out);
-			tlsprint(st, wbuf);
-		} else {
-			printf("%s" CRLF, out);
-		}
+		printf("%s" CRLF, out);
 		line++;
 	}
 
 #ifdef ENABLE_STRICT_RFC1436
-	if (st->server_tls == 1) {
-		snprintf(wbuf, BUFSIZE, "." CRLF);
-		tlsprint(st, wbuf);
-	} else {
-		printf("." CRLF);
-	}
+	printf("." CRLF);
 #endif
 	fclose(fp);
 }
@@ -120,10 +103,8 @@ void send_text_file(state *st)
 void url_redirect(state *st)
 {
 	char dest[BUFSIZE];
-	char wbuf[BUFSIZE];
 	char *c;
 
-	ssize_t w = 0;
 	/* Basic security checking */
 	sstrlcpy(dest, st->req_selector + 4);
 
@@ -148,25 +129,6 @@ void url_redirect(state *st)
 	log_combined(st, HTTP_OK);
 
 	/* Output HTML */
-	syslog(LOG_INFO, "OUTPUT HTML\n");
-	if (st->server_tls == 1){
-		snprintf(wbuf, BUFSIZE, 
-			"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n"
-			"<HTML>\n<HEAD>\n"
-			 "  <META HTTP-EQUIV=\"Refresh\" content=\"1;URL=%1$s\">\n"
-			"  <META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html;charset=iso-8859-1\">\n"
-			"  <TITLE>URL Redirect page</TITLE>\n"
-			"</HEAD>\n<BODY>\n"
-			"<STRONG>Redirecting to <A HREF=\"%1$s\">%1$s</A></STRONG>\n"
-			"<PRE>\n", dest);
-		tlsprint(st, wbuf);
-		footer(st);
-		snprintf(wbuf, BUFSIZE, "</PRE>\n</BODY>\n</HTML>\n");
-		tlsprint(st, wbuf);
-
-/*		if (st->opt_syslog) */
-			syslog(LOG_INFO, "Wrote %zd bytes: %s\n", w, wbuf);
-	}else{
 	printf("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n"
 		"<HTML>\n<HEAD>\n"
 		"  <META HTTP-EQUIV=\"Refresh\" content=\"1;URL=%1$s\">\n"
@@ -177,7 +139,6 @@ void url_redirect(state *st)
 		"<PRE>\n", dest);
 	footer(st);
 	printf("</PRE>\n</BODY>\n</HTML>\n");
-	}
 }
 
 
@@ -192,7 +153,6 @@ void server_status(state *st, shm_state *shm, int shmid)
 	time_t uptime;
 	int sessions;
 	int i;
-	char wbuf[BUFSIZE];
 
 	/* Log the request */
 	if (st->opt_syslog) {
@@ -219,27 +179,6 @@ void server_status(state *st, shm_state *shm, int shmid)
 	shmctl(shmid, IPC_STAT, &shm_ds);
 
 	/* Print statistics */
-	
-	if(st->server_tls) {
-		snprintf(wbuf, BUFSIZE, "Total Accesses: %li" CRLF
-                "Total kBytes: %li" CRLF
-                "Uptime: %i" CRLF
-                "ReqPerSec: %.3f" CRLF
-                "BytesPerSec: %li" CRLF
-                "BytesPerReq: %li" CRLF
-                "BusyServers: %i" CRLF
-                "IdleServers: 0" CRLF
-                "CPULoad: %.2f" CRLF,
-                        shm->hits,
-                        shm->kbytes,
-                        (int) uptime,
-                        (float) shm->hits / (float) uptime,
-                        shm->kbytes * 1024 / (int) uptime,
-		(int) shm_ds.shm_nattch,
-		loadavg());
-
-		tlsprint(st, wbuf);
-	} else {
 	printf("Total Accesses: %li" CRLF
 		"Total kBytes: %li" CRLF
 		"Uptime: %i" CRLF
@@ -257,7 +196,6 @@ void server_status(state *st, shm_state *shm, int shmid)
 			shm->kbytes * 1024 / (shm->hits + 1),
 			(int) shm_ds.shm_nattch,
 			loadavg());
-	}
 
 	/* Print active sessions */
 	sessions = 0;
@@ -267,10 +205,7 @@ void server_status(state *st, shm_state *shm, int shmid)
 			sessions++;
 
 			if (st->debug) {
-			
-			if(st->server_tls) {
-				snprintf(wbuf, BUFSIZE,
-					"Session: %-4i %-40s %-4li %-7li gopher%s://%s:%i/%c%s" CRLF,
+				printf("Session: %-4i %-40s %-4li %-7li gopher%s://%s:%i/%c%s" CRLF,
 					(int) (now - shm->session[i].req_atime),
 					shm->session[i].req_remote_addr,
 					shm->session[i].hits,
@@ -280,23 +215,9 @@ void server_status(state *st, shm_state *shm, int shmid)
 					shm->session[i].server_port,
 					shm->session[i].req_filetype,
 					shm->session[i].req_selector);
-				tlsprint(st, wbuf);	
-			} else {
-			printf("Session: %-4i %-40s %-4li %-7li gopher://%s:%i/%c%s" CRLF,
-				(int) (now - shm->session[i].req_atime),
-				shm->session[i].req_remote_addr,
-				shm->session[i].hits,
-				shm->session[i].kbytes,
- 				(shm->session[i].server_port == st->server_tls_port ? "s" : ""),
-				shm->session[i].server_host,
-				shm->session[i].server_port,
-				shm->session[i].req_filetype,
-				shm->session[i].req_selector);
-				}
 			}
 		}
 	}
-	
 
 	printf("Total Sessions: %i" CRLF, sessions);
 }

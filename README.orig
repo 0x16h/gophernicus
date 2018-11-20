@@ -7,7 +7,6 @@ Command line options:
     -h hostname   Change server hostname (FQDN)      [$HOSTNAME]
     -p port       Change server port                 [70]
     -T port       Change TLS/SSL port                [0 = disabled]
-    -z 1          Enable TLS                         [0]          
     -r root       Change gopher root                 [/var/gopher]
     -t type       Change default gopher filetype     [0]
     -g mapfile    Change gophermap file              [gophermap]

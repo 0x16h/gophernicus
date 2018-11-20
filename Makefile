@@ -55,6 +55,7 @@ all:
 	@case `uname` in \
 		Darwin)	$(MAKE) ROOT="$(OSXROOT)" DESTDIR="$(OSXDEST)" $(BINARY); ;; \
 		Haiku)	$(MAKE) EXTRA_LIBS="-lnetwork" $(BINARY); ;; \
+		OpenBSD) $(MAKE) EXTRA_LIBS="-ltls -lssl -lcrypto" $(BINARY); ;; \
 		*)	if [ -f "/usr/include/tcpd.h" ]; then $(MAKE) withwrap; else $(MAKE) $(BINARY); fi; ;; \
 	esac
 
@@ -254,6 +255,20 @@ install-systemd:
 		systemctl start $(NAME).socket; \
 	fi
 	@echo
+
+#
+# Self-signed keys
+#
+key:
+	openssl req -newkey rsa:4096 -nodes -sha512 -x509 -days 3650 -nodes \
+		-subj "/C=UK/ST=London/O=Gophernicus/OU=gopherd/CN=localhost" \
+		-out gophernicus.pem -keyout gophernicus.key
+
+key-install:
+	$(INSTALL) -m 440 gophernicus.pem /etc/ssl/
+	$(INSTALL) -m 400 gophernicus.key /etc/ssl/
+	chown _gophernicus /etc/ssl/gophernicus.pem
+	chown _gophernicus /etc/ssl/gophernicus.key
 
 #
 # Uninstall targets

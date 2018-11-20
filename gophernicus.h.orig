@@ -56,7 +56,6 @@
 #define HAVE_UNAME		/* uname() */
 #define HAVE_POPEN		/* popen() */
 #undef  HAVE_STRLCPY		/* strlcpy() from OpenBSD */
-#undef  HAVE_TLS		/* libtls on OpenBSD */
 #undef  HAVE_SENDFILE		/* sendfile() in Linux & others */
 /* #undef  HAVE_LIBWRAP		   autodetected, don't enable here */
 
@@ -82,7 +81,6 @@
 /* OpenBSD */
 #ifdef __OpenBSD__
 #define HAVE_STRLCPY
-#define HAVE_TLS
 #endif
 
 /* MacOS */
@@ -136,11 +134,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
-
-#ifdef HAVE_TLS
-#include <tls.h>
-#include <err.h>
 #endif
 
 #ifdef HAVE_UNAME
@@ -222,13 +215,6 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 #define MIN_WIDTH		33
 #define MAX_WIDTH		200
 #define UNKNOWN_ADDR		"unknown"
-
-/* TLS defaults */
-#ifdef HAVE_TLS
-#define TLS_CA "/etc/ssl/cert.pem"
-#define TLS_CERT "/etc/ssl/gophernicus.pem"
-#define TLS_KEY "/etc/ssl/gophernicus.key"
-#endif
 
 /* Session defaults */
 #define DEFAULT_SESSION_TIMEOUT		1800
@@ -334,11 +320,6 @@ typedef struct {
 	char server_host[64];
 	int  server_port;
 	int  server_tls_port;
-	int  server_tls;
-	#ifdef HAVE_TLS
-	struct tls *tls_ctx;
-	struct tls *tls_cctx;
-	#endif
 
 	char default_filetype;
 	char map_file[64];
@@ -400,7 +381,6 @@ typedef struct {
 
 	char server_host[64];
 	int  server_port;
-	int  server_tls;
 } shm_session;
 
 typedef struct {

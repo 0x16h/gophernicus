@@ -42,7 +42,6 @@ void info(state *st, char *str, char type)
 {
 	char buf[BUFSIZE];
 	char selector[16];
-	char wbuf[BUFSIZE];
 
 	/* Convert string to output charset */
 	if (st->opt_iconv) sstrniconv(st->out_charset, buf, str);
@@ -57,14 +56,8 @@ void info(state *st, char *str, char type)
 
 	/* Output info line */
 	strcut(buf, st->out_width);
-	if (st->server_tls == 1){
-		snprintf(wbuf, BUFSIZE, "%c%s\t%s\t%s" CRLF,
-				type, buf, selector, DUMMY_HOST);
-		tlsprint(st, wbuf);
-	}else{
 	printf("%c%s\t%s\t%s" CRLF,
 		type, buf, selector, DUMMY_HOST);
-	}
 }
 
 
@@ -76,20 +69,12 @@ void footer(state *st)
 	char line[BUFSIZE];
 	char buf[BUFSIZE];
 	char msg[BUFSIZE];
-	char wbuf[BUFSIZE];
-	ssize_t w = 0;
-	ssize_t wr = 0;
 
 	if (!st->opt_footer) {
 #ifndef ENABLE_STRICT_RFC1436
 		if (st->req_filetype == TYPE_MENU || st->req_filetype == TYPE_QUERY)
 #endif
-		if (st->server_tls ==1){
-			snprintf(wbuf, BUFSIZE, "." CRLF);
-			tlsprint(st, wbuf);
-		}else{	
 			printf("." CRLF);
-		}
 		return;
 	}
 
@@ -104,50 +89,19 @@ void footer(state *st)
 	if (st->req_filetype == TYPE_MENU || st->req_filetype == TYPE_QUERY) {
 		info(st, line, TYPE_INFO);
 		info(st, msg, TYPE_INFO);
-		if (st->server_tls == 1) {
-			w = 0; 
-			wr = 0; 
-			/* wbuf = ""; */
-			snprintf(wbuf, BUFSIZE, "." CRLF);
-			tlsprint(st, wbuf);
-		/* syslog(LOG_INFO, "footer()[2]: %zd written", w); */
-		}else{
 		printf("." CRLF);
-		}
 	}
 
 	/* Plain text footer */
 	else {
-		if (st->server_tls == 1) {
-			w = 0; wr = 0; 
-			/* wbuf = NULL; */
-			snprintf(wbuf, BUFSIZE, "%s" CRLF, line);
-			tlsprint(st, wbuf);
-			snprintf(wbuf, BUFSIZE, "%s" CRLF, msg);
-			tlsprint(st, wbuf);
-		#ifdef ENABLE_STRICT_RFC1436
-			snprintf(wbuf, BUFSIZE, "." CRLF);
-			tlsprint(st, wbuf);
-		#endif
-		}else {
 		printf("%s" CRLF, line);
 		printf("%s" CRLF, msg);
 #ifdef ENABLE_STRICT_RFC1436
 		printf("." CRLF);
 #endif
-		}
 	}
 }
 
-void tlsprint(state *st, char *str)
-{
-	char wbuf[BUFSIZE];
-	ssize_t w = 0;
-	ssize_t wr = 0;
-	snprintf(wbuf, BUFSIZE, str);
-	w = tls_write(st->tls_cctx, wbuf + wr, strlen(wbuf) - wr);
-	syslog(LOG_INFO, "tlsprint: %zd written", w);
-}
 
 /*
  * Print error message & exit
@@ -156,9 +110,6 @@ void die(state *st, char *message, char *description)
 {
 	int en = errno;
 	static const char error_gif[] = ERROR_GIF;
-	ssize_t w = 0;
-	ssize_t wr = 0;
-	char wbuf[BUFSIZE];
 
 	/* Handle NULL description */
 	if (description == NULL) description = strerror(en);
@@ -172,14 +123,7 @@ void die(state *st, char *message, char *description)
 
 	/* Handle menu errors */
 	if (st->req_filetype == TYPE_MENU || st->req_filetype == TYPE_QUERY) {
-		if (st->server_tls == 1){
-			snprintf(wbuf, BUFSIZE, "3" ERROR_PREFIX "%s\tTITLE\t"
-					DUMMY_HOST CRLF, message);
-			w = tls_write(st->tls_cctx, wbuf + wr, strlen(wbuf) - 
-					wr);
-		}else{
 		printf("3" ERROR_PREFIX "%s\tTITLE\t" DUMMY_HOST CRLF, message);
-		}
 		footer(st);
 	}
 
@@ -190,17 +134,6 @@ void die(state *st, char *message, char *description)
 
 	/* Handle HTML errors */
 	else if (st->req_filetype == TYPE_HTML) {
-		if (st->server_tls == 1){
-			snprintf(wbuf, BUFSIZE, "<HTML><HEAD><TITLE>"
-				ERROR_PREFIX "%1$s</TITLE>\n"
-				"</HEAD>\n<BODY>\n"
-				"<STRONG>" ERROR_PREFIX "%1$s</STRONG>\n"
-				"<PRE>\n", message);
-			w = tls_write(st->tls_cctx, wbuf + wr, strlen(wbuf) - wr);
-			footer(st);
-			snprintf(wbuf, BUFSIZE, "</pre>\n</BODY>\n</HTML>\n");
-			w = tls_write(st->tls_cctx, wbuf + wr, strlen(wbuf) - wr);
-		}else{
 		printf("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n"
 			"<HTML>\n<HEAD>\n"
 			"  <META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html;charset=iso-8859-1\">\n"
@@ -210,7 +143,6 @@ void die(state *st, char *message, char *description)
 			"<PRE>\n", message);
 		footer(st);
 		printf("</PRE>\n</BODY>\n</HTML>\n");
-		}
 	}
 
 	/* Use plain text error for other filetypes */
@@ -494,11 +426,6 @@ void init_state(state *st)
 	st->server_port = DEFAULT_PORT;
 	st->server_tls_port = DEFAULT_TLS_PORT;
 
-	st->server_tls = 0;
-	#ifdef HAVE_TLS
-	st->tls_ctx = NULL;
-	st->tls_cctx = NULL;
-	#endif
 	st->default_filetype = DEFAULT_TYPE;
 	sstrlcpy(st->map_file, DEFAULT_MAP);
 	sstrlcpy(st->tag_file, DEFAULT_TAG);
@@ -570,13 +497,6 @@ int main(int argc, char *argv[])
 	char remote[BUFSIZE];
 	char local[BUFSIZE];
 	int dummy;
-#endif
-#ifdef HAVE_TLS
-        struct tls_config *tlscfg;
-        struct tls *req_fd;
-        char wbuf[BUFSIZE];
-        ssize_t w = 0;
-        ssize_t wr = 0;
 #endif
 
 	/* Get the name of this binary */
@@ -655,61 +575,8 @@ int main(int argc, char *argv[])
 
 	/* Read selector */
 get_selector:
-		
-	if (st.server_tls == 1){
-		sstrlcpy(st.server_description, "TLS");
-		/* st.tls_ctx = gtls_init(&st); */ 
-		/* int gtls_handshake(st.tls_ctx); */
-		/* if (tls_accept_socket(ctx, &cctx, gop_sd) == -1) */
-		if (st.debug) syslog(LOG_INFO, "Running in TLS mode");
-		int gop_sdi, gop_sdo, i;
-		int connfd, s;
-		struct sockaddr_in cliaddr;
-		socklen_t cliaddrsize = sizeof(cliaddr);
-		s = getpeername(0, (struct sockaddr *) &cliaddr, &cliaddrsize);
-		connfd = s+1;
-		gop_sdi = dup(STDIN_FILENO);
-		gop_sdo = dup(STDOUT_FILENO);
-
-		
-		if (tls_init() == -1)
-			if (st.debug) syslog(LOG_INFO, "tls_init() failed");
-		tlscfg = tls_config_new();
-		if (tls_config_set_ca_file(tlscfg, TLS_CA) == -1)
-			if (st.debug) syslog(LOG_INFO, "Cannot set CA file");
-		if (tls_config_set_key_file(tlscfg, TLS_KEY) == -1)
-			if (st.debug) syslog(LOG_INFO, "Cannot set key");
-		if (tls_config_set_cert_file(tlscfg, TLS_CERT) == -1)
-			if (st.debug) syslog(LOG_INFO, "Cannot set cert");
-		if ((st.tls_ctx = tls_server()) == NULL)
-			if (st.debug) syslog(LOG_INFO, "Cannot create TLS server");
-		if (tls_configure(st.tls_ctx, tlscfg) == -1)
-			if (st.debug) syslog(LOG_INFO, "tls_configure failed (%s)", tls_error(st.tls_ctx));
-			
-		if (tls_accept_socket(st.tls_ctx, &st.tls_cctx, connfd) == -1)
-			if (st.debug) syslog(LOG_INFO, "Cannot accept tls  (%s)", tls_error(st.tls_ctx));
-		do {
-			if ((i = tls_handshake(st.tls_cctx)) == -1)
-				{
-				if (st.debug) syslog(LOG_INFO, "Cannot handshake (%s)", 
-					tls_error(st.tls_cctx));
-				exit(1);
-			}
-		} while (i == TLS_WANT_POLLIN || i == TLS_WANT_POLLOUT);
-		
-/*		req_fd = malloc(sizeof(st.tls_cctx));*/
-		req_fd = st.tls_cctx;
-}
-
-	if (st.server_tls == 1){
-		if (w = tls_read(req_fd, selector, sizeof(selector)) == NULL)
-			selector[0] = '\0';
-		if (st.debug) syslog(LOG_INFO, "[tls] %zd bytes read", w);
-	
-	}else{
 	if (fgets(selector, sizeof(selector) - 1, stdin) == NULL)
 		strclear(selector);
-	}
 
 	/* Remove trailing CRLF */
 	chomp(selector);
@@ -743,24 +610,13 @@ get_selector:
 
 	/* Handle gopher+ root requests (UMN gopher client is seriously borken) */
 	if (sstrncmp(selector, "\t$") == MATCH) {
-		
-		if (st.server_tls == 1){
-			snprintf(wbuf, BUFSIZE, "+-1" CRLF);
-			snprintf(wbuf, BUFSIZE, "+INFO: 1Main menu\t\t%s\t%i" CRLF,
-				st.server_host,
-				st.server_port);
-			snprintf(wbuf, BUFSIZE, "+VIEWS:" CRLF " application/gopher+-menu: <512b>" CRLF);
-			snprintf(wbuf, BUFSIZE, "." CRLF);
-			w = tls_write(req_fd, wbuf + wr, strlen(wbuf) - wr);
-			
-		} else {
-			printf("+-1" CRLF);
-			printf("+INFO: 1Main menu\t\t%s\t%i" CRLF,
-				st.server_host,
-				st.server_port);
-			printf("+VIEWS:" CRLF " application/gopher+-menu: <512b>" CRLF);
-			printf("." CRLF);
-		}
+		printf("+-1" CRLF);
+		printf("+INFO: 1Main menu\t\t%s\t%i" CRLF,
+			st.server_host,
+			st.server_port);
+		printf("+VIEWS:" CRLF " application/gopher+-menu: <512b>" CRLF);
+		printf("." CRLF);
+
 		if (st.debug) syslog(LOG_INFO, "got a request for gopher+ root menu");
 		return OK;
 	}

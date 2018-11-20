@@ -1,0 +1,8 @@
+@@ -59,7 +59,7 @@
+ Additional type characters supported by Gophernicus:
+    #          comment - rest of the line is ignored
+    !title     menu title (use on the first line)
+   -file      hide file from listings
+    :ext=type  change filetype (for this directory only)
+    ~          include a list of users with valid ~/public_gopher
+    %          include a list of available virtual hosts
