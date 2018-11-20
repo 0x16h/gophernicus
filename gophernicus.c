@@ -603,6 +603,29 @@ int main(int argc, char *argv[])
 		die(&st, ERR_ACCESS, "Refused connection");
 #endif
 
+#ifdef __OpenBSD__
+	char *pledgefest = "stdio rpath wpath cpath \
+		tmppath inet dns fattr flock \
+		unix getpw sendfd recvfd tty error";
+		
+	if (unveil("/tmp", "rcw") == -1)
+		if (st.debug) syslog(LOG_INFO, "unveil");
+	if (unveil("/etc/hosts", "r") == -1)
+		if (st.debug) syslog(LOG_INFO, "unveil");
+	if (unveil("/etc/resolv.conf", "r") == -1)
+		if (st.debug) syslog(LOG_INFO, "unveil");
+	if (unveil(TLS_CA, "r") == -1)
+		if (st.debug) syslog(LOG_INFO, "unveil");
+	if (unveil(TLS_KEY, "r") == -1)
+		if (st.debug) syslog(LOG_INFO, "unveil");
+	if (unveil(TLS_CERT, "r") == -1)
+		if (st.debug) syslog(LOG_INFO, "unveil");
+	if (unveil(st.server_root, "r") == -1)
+		if (st.debug) syslog(LOG_INFO, "unveil: DEFAULT_ROOT");
+	if (pledge(pledgefest, NULL) == -1)
+		if (st.debug) syslog(LOG_INFO, "pledge");
+#endif
+
 	/* Make sure the computer is turned on */
 #ifdef __HAIKU__
 	if (is_computer_on() != TRUE)
@@ -700,6 +723,7 @@ get_selector:
 /*		req_fd = malloc(sizeof(st.tls_cctx));*/
 		req_fd = st.tls_cctx;
 }
+
 
 	if (st.server_tls == 1){
 		if (w = tls_read(req_fd, selector, sizeof(selector)) == NULL)
