@@ -102,7 +102,7 @@ void parse_args(state *st, int argc, char *argv[])
 			case 'h': sstrlcpy(st->server_host, optarg); break;
 			case 'p': st->server_port = atoi(optarg); break;
 			case 'T': st->server_tls_port = atoi(optarg); break;
-			case 'z': st->server_tls = 1; break;
+			case 'z': st->server_tls = atoi(optarg); break;
 			case 'r': sstrlcpy(st->server_root, optarg); break;
 			case 't': st->default_filetype = *optarg; break;
 			case 'g': sstrlcpy(st->map_file, optarg); break;

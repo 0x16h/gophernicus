@@ -1,0 +1,49 @@
+Compiling and installing on OpenBSD
+===================================
+
+OpenBSD host implies TLS support. 
+
+Building:
+
+    $ make key        # generate self-signed cert and key for localhost
+    $ make
+
+Install:
+
+    $ doas make key-install	# install cert and key to /etc/ssl
+    $ doas make install
+
+In /etc/inetd.conf:
+
+gopher stream tcp nowait _gophernicus /usr/local/libexec/in.gophernicus \
+	in.gophernicus -h <hostname> 
+ 
+and for TLS on 343:
+
+gophers stream tcp nowait _gophernicus /usr/local/libexec/in.gophernicus \ 	in.gophernicus-tls -h <hostname> -T 343 -z 1
+
+
+Because there is no IANA-designated port for Gopher 
+over TLS, add the service to /etc/services:
+
+    gophers     343/tcp
+
+
+TLS defaults:
+
+    TLS_CA    "/etc/ssl/cert.pem"
+    TLS_CERT  "/etc/ssl/gophernicus.pem"
+    TLS_KEY   "/etc/ssl/gophernicus.key"
+
+Run:
+
+    $ rcctl -f start inetd
+
+Testing:
+
+    $ pkg_add socat gopher
+    $ ./client <unprivileged port>
+
+or  $ openssl s_client -connect localhost:343 -tls1_2
+
+
