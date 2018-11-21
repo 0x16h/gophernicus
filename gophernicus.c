@@ -953,6 +953,13 @@ get_selector:
 	}
 
 	/* Clean exit */
+	if (st.server_tls == 1){
+		int i;
+		i = 0;
+		do {
+			i = tls_close(st.tls_ctx);
+		} while(i == TLS_WANT_POLLIN || i == TLS_WANT_POLLOUT);
+	}
 	return OK;
 }
 
