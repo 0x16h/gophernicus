@@ -141,12 +141,14 @@ void footer(state *st)
 
 void tlsprint(state *st, char *str)
 {
+#ifdef HAVE_TLS
 	char wbuf[BUFSIZE];
 	ssize_t w = 0;
 	ssize_t wr = 0;
 	snprintf(wbuf, BUFSIZE, str);
 	w = tls_write(st->tls_cctx, wbuf + wr, strlen(wbuf) - wr);
 	syslog(LOG_INFO, "tlsprint: %zd written", w);
+#endif
 }
 
 /*
@@ -173,10 +175,12 @@ void die(state *st, char *message, char *description)
 	/* Handle menu errors */
 	if (st->req_filetype == TYPE_MENU || st->req_filetype == TYPE_QUERY) {
 		if (st->server_tls == 1){
+#ifdef HAVE_TLS
 			snprintf(wbuf, BUFSIZE, "3" ERROR_PREFIX "%s\tTITLE\t"
 					DUMMY_HOST CRLF, message);
 			w = tls_write(st->tls_cctx, wbuf + wr, strlen(wbuf) - 
 					wr);
+#endif
 		}else{
 		printf("3" ERROR_PREFIX "%s\tTITLE\t" DUMMY_HOST CRLF, message);
 		}
@@ -191,6 +195,7 @@ void die(state *st, char *message, char *description)
 	/* Handle HTML errors */
 	else if (st->req_filetype == TYPE_HTML) {
 		if (st->server_tls == 1){
+#ifdef HAVE_TLS
 			snprintf(wbuf, BUFSIZE, "<HTML><HEAD><TITLE>"
 				ERROR_PREFIX "%1$s</TITLE>\n"
 				"</HEAD>\n<BODY>\n"
@@ -200,6 +205,7 @@ void die(state *st, char *message, char *description)
 			footer(st);
 			snprintf(wbuf, BUFSIZE, "</pre>\n</BODY>\n</HTML>\n");
 			w = tls_write(st->tls_cctx, wbuf + wr, strlen(wbuf) - wr);
+#endif
 		}else{
 		printf("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n"
 			"<HTML>\n<HEAD>\n"
@@ -676,9 +682,7 @@ int main(int argc, char *argv[])
 #endif
 		platform(&st);
 
-	/* Read selector */
-get_selector:
-		
+#ifdef HAVE_TLS
 	if (st.server_tls == 1){
 		sstrlcpy(st.server_description, "TLS");
 		/* st.tls_ctx = gtls_init(&st); */ 
@@ -722,14 +726,16 @@ get_selector:
 		
 /*		req_fd = malloc(sizeof(st.tls_cctx));*/
 		req_fd = st.tls_cctx;
-}
+#endif
 
-
+get_selector:
+	
 	if (st.server_tls == 1){
+#ifdef HAVE_TLS
 		if (w = tls_read(req_fd, selector, sizeof(selector)) == NULL)
 			selector[0] = '\0';
 		if (st.debug) syslog(LOG_INFO, "[tls] %zd bytes read", w);
-	
+#endif
 	}else{
 	if (fgets(selector, sizeof(selector) - 1, stdin) == NULL)
 		strclear(selector);
@@ -769,6 +775,7 @@ get_selector:
 	if (sstrncmp(selector, "\t$") == MATCH) {
 		
 		if (st.server_tls == 1){
+#ifdef HAVE_TLS
 			snprintf(wbuf, BUFSIZE, "+-1" CRLF);
 			snprintf(wbuf, BUFSIZE, "+INFO: 1Main menu\t\t%s\t%i" CRLF,
 				st.server_host,
@@ -776,7 +783,7 @@ get_selector:
 			snprintf(wbuf, BUFSIZE, "+VIEWS:" CRLF " application/gopher+-menu: <512b>" CRLF);
 			snprintf(wbuf, BUFSIZE, "." CRLF);
 			w = tls_write(req_fd, wbuf + wr, strlen(wbuf) - wr);
-			
+#endif			
 		} else {
 			printf("+-1" CRLF);
 			printf("+INFO: 1Main menu\t\t%s\t%i" CRLF,
@@ -954,11 +961,13 @@ get_selector:
 
 	/* Clean exit */
 	if (st.server_tls == 1){
+#ifdef HAVE_TLS
 		int i;
 		i = 0;
 		do {
 			i = tls_close(st.tls_ctx);
 		} while(i == TLS_WANT_POLLIN || i == TLS_WANT_POLLOUT);
+#endif
 	}
 	return OK;
 }

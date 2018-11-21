@@ -47,7 +47,6 @@ LDFLAGS =
 
 IPCRM   = /usr/bin/ipcrm
 
-
 #
 # Platform support, compatible with both BSD and GNU make
 #
@@ -56,6 +55,7 @@ all:
 		Darwin)	$(MAKE) ROOT="$(OSXROOT)" DESTDIR="$(OSXDEST)" $(BINARY); ;; \
 		Haiku)	$(MAKE) EXTRA_LIBS="-lnetwork" $(BINARY); ;; \
 		OpenBSD) $(MAKE) EXTRA_LIBS="-ltls -lssl -lcrypto" $(BINARY); ;; \
+		FreeBSD) if [ -f "/usr/local/include/tls.h" ]; then $(MAKE) EXTRA_LIBS="-ltls -lssl -lcrypto" $(BINARY); else $(MAKE) $(BINARY); fi; ;; \
 		*)	if [ -f "/usr/include/tcpd.h" ]; then $(MAKE) withwrap; else $(MAKE) $(BINARY); fi; ;; \
 	esac
 
