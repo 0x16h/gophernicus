@@ -54,7 +54,7 @@ all:
 	@case `uname` in \
 		Darwin)	$(MAKE) ROOT="$(OSXROOT)" DESTDIR="$(OSXDEST)" $(BINARY); ;; \
 		Haiku)	$(MAKE) EXTRA_LIBS="-lnetwork" $(BINARY); ;; \
-		OpenBSD) $(MAKE) EXTRA_LIBS="-ltls -lssl -lcrypto" $(BINARY); ;; \
+		OpenBSD) $(MAKE) EXTRA_LIBS="-DHAVE_TLS -ltls -lssl -lcrypto" $(BINARY); ;; \
 		FreeBSD) if [ -f "/usr/local/include/tls.h" ]; then $(MAKE) EXTRA_LIBS="-ltls -lssl -lcrypto" $(BINARY); else $(MAKE) $(BINARY); fi; ;; \
 		*)	if [ -f "/usr/include/tcpd.h" ]; then $(MAKE) withwrap; else $(MAKE) $(BINARY); fi; ;; \
 	esac
@@ -142,6 +142,7 @@ install: ChangeLog clean-shm
 		Darwin)  $(MAKE) ROOT="$(OSXROOT)" DESTDIR="$(OSXDEST)" install-files install-docs install-root install-osx install-done; ;; \
 		Haiku)   $(MAKE) SBINDIR=/boot/common/bin DOCDIR=/boot/common/share/doc/$(PACKAGE) \
 		                 install-files install-docs install-root install-haiku install-done; ;; \
+		FreeBSD) $(MAKE) DESTDIR="$(OSXDEST)" install-files install-docs install-root; ;; \ 
 		*)       $(MAKE) install-files install-docs install-root; ;; \
 	esac
 	@if [ -d "$(HAS_STD)" ]; then $(MAKE) install-systemd install-done; \
@@ -256,9 +257,9 @@ install-systemd:
 	fi
 	@echo
 
-#
+
 # Self-signed keys
-#
+
 key:
 	openssl req -newkey rsa:4096 -nodes -sha512 -x509 -days 3650 -nodes \
 		-subj "/C=UK/ST=London/O=Gophernicus/OU=gopherd/CN=localhost" \
@@ -332,4 +333,3 @@ copyright:
 	sed -i .stupid -e "s/Copyright .c. 2.*$$/Copyright (c) $(STARTED)-`date +%Y` $(AUTHOR) <$(EMAIL)>/" *.c *.h LICENSE README debian/copyright
 	sed -i .stupid -e "s/Maintainer: .*$$/Maintainer: $(AUTHOR) <$(EMAIL)>/" debian/control
 	rm -f *.stupid debian/*.stupid
-
